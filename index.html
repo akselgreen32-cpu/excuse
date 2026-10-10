@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#150f33">
+<title>Excuse Quest: a game about replying late</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🗡️%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{--night:#150f33;--plum:#3a1f6e;--cream:#fff8e7;--sun:#ffd166;--pink:#ff6fa3;--mint:#5eead4;
+--px:"Press Start 2P","Courier New",monospace;--vt:"VT323","Courier New",monospace;
+--notch:polygon(0 4px,4px 4px,4px 0,calc(100% - 4px) 0,calc(100% - 4px) 4px,100% 4px,100% calc(100% - 4px),calc(100% - 4px) calc(100% - 4px),calc(100% - 4px) 100%,4px 100%,4px calc(100% - 4px),0 calc(100% - 4px))}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{font-family:var(--px);color:var(--cream);line-height:1.7;font-size:12px;overflow-x:hidden;background:var(--night);-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+:focus-visible{outline:4px solid var(--mint);outline-offset:3px}
+
+/* world */
+.sky{position:fixed;inset:0;background:linear-gradient(#150f33 0,#3a1f6e 34%,#b3437f 64%,#ff9a5a 84%,#ffd166 100%);overflow:hidden;z-index:0;image-rendering:pixelated}
+.sky::before{content:"";position:absolute;left:0;top:0;width:4px;height:4px;background:#fff;animation:tw 2.4s steps(2) infinite;
+box-shadow:5vw 8vh #fff,14vw 22vh #ffe9a8,24vw 6vh #fff,33vw 17vh #fff,41vw 9vh #ffe9a8,52vw 25vh #fff,61vw 5vh #fff,70vw 19vh #ffe9a8,79vw 8vh #fff,88vw 24vh #fff,94vw 11vh #ffe9a8,9vw 36vh #fff,47vw 38vh #fff,83vw 40vh #fff}
+@keyframes tw{50%{opacity:.35}}
+.sun{position:absolute;left:50%;bottom:16vh;width:min(46vw,260px);aspect-ratio:1;margin-left:calc(min(46vw,260px) / -2);border-radius:50%;background:linear-gradient(#ffe28a,#ff6fa3);
+-webkit-mask:linear-gradient(#000 0 52%,transparent 52% 58%,#000 58% 68%,transparent 68% 75%,#000 75% 84%,transparent 84% 91%,#000 91%);mask:linear-gradient(#000 0 52%,transparent 52% 58%,#000 58% 68%,transparent 68% 75%,#000 75% 84%,transparent 84% 91%,#000 91%)}
+.cloud{position:absolute;height:48px;width:128px;background:rgba(255,248,231,.22);clip-path:polygon(0 100%,0 62%,14% 62%,14% 30%,38% 30%,38% 0,64% 0,64% 30%,86% 30%,86% 62%,100% 62%,100% 100%);animation:drift 80s linear infinite}
+.c1{top:14vh;left:-140px}.c2{top:30vh;left:-140px;animation-duration:120s;animation-delay:-50s;transform:scale(1.5)}
+@keyframes drift{to{transform:translateX(calc(100vw + 300px))}}
+.city{position:absolute;left:0;right:0;bottom:0;height:24vh;background:var(--night);clip-path:polygon(0 100%,0 55%,6% 55%,6% 30%,12% 30%,12% 60%,18% 60%,18% 40%,22% 40%,22% 15%,26% 15%,26% 45%,32% 45%,32% 65%,40% 65%,40% 35%,46% 35%,46% 55%,54% 55%,54% 25%,59% 25%,59% 50%,66% 50%,66% 70%,74% 70%,74% 38%,80% 38%,80% 58%,88% 58%,88% 28%,93% 28%,93% 52%,100% 52%,100% 100%)}
+
+/* hud */
+.hud{position:fixed;top:max(12px,env(safe-area-inset-top));left:12px;z-index:5;display:flex;align-items:center;gap:10px;background:var(--night);border:4px solid var(--cream);padding:8px 12px;clip-path:var(--notch);font-size:10px;transition:opacity .3s,transform .3s}
+.hud.off{opacity:0;transform:translateY(-14px);pointer-events:none}
+.bar{display:block;width:84px;height:14px;border:3px solid var(--cream);background:var(--plum)}
+.bar i{display:block;height:100%;width:0;background:var(--sun);transition:width .6s steps(8)}
+#snd{position:fixed;top:max(12px,env(safe-area-inset-top));right:12px;z-index:5;width:48px;height:44px;background:var(--night);border:4px solid var(--cream);clip-path:var(--notch);font-size:10px}
+
+/* screens */
+main{position:relative;z-index:2;min-height:100svh;display:grid;padding:76px 16px calc(24px + env(safe-area-inset-bottom));justify-items:center;align-items:center}
+.screen{grid-area:1/1;width:min(680px,100%);display:grid;gap:20px;opacity:0;visibility:hidden;transform:translateY(18px);transition:opacity .3s,transform .3s,visibility 0s .3s}
+.screen.on{opacity:1;visibility:visible;transform:none;transition:opacity .35s .1s,transform .35s .1s,visibility 0s}
+h2{font-size:clamp(14px,3.6vw,20px);text-align:center;color:var(--sun);text-shadow:3px 3px 0 var(--night);line-height:1.5}
+.panel{background:var(--night);border:4px solid var(--cream);padding:18px;clip-path:var(--notch)}
+.btn{display:inline-block;padding:16px 20px;font-size:12px;background:var(--sun);color:var(--night);clip-path:var(--notch);box-shadow:inset -4px -4px 0 rgba(0,0,0,.28),inset 4px 4px 0 rgba(255,255,255,.5);transition:transform .06s,filter .15s;text-align:center;text-decoration:none}
+.btn:hover{filter:brightness(1.08)}.btn:active{transform:translateY(4px)}
+.btn.alt{background:var(--cream)}.btn.pink{background:var(--pink)}
+.btn:disabled{filter:grayscale(1) brightness(.6);cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+
+/* title */
+#title{text-align:center;justify-items:center;gap:26px}
+.tag{font-size:11px;color:var(--cream);background:var(--night);padding:8px 12px;border:3px solid var(--cream)}
+.logo{font-size:clamp(34px,10vw,76px);line-height:1.05;color:var(--sun);text-shadow:4px 4px 0 var(--pink),8px 8px 0 var(--night);letter-spacing:-.02em}
+.logo b{display:block;color:var(--cream);font-weight:400;font-size:1.28em;text-shadow:4px 4px 0 var(--pink),8px 8px 0 var(--night)}
+.start{font-size:clamp(14px,3.6vw,18px);padding:20px 30px}
+.start span{animation:bl 1s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+.hi{font-size:10px;background:var(--night);padding:8px 12px}
+.hero{display:flex;gap:10px;justify-content:center}
+.hero svg{width:44px;height:44px;animation:hop 1.2s steps(2) infinite}
+.hero svg:nth-child(even){animation-delay:.3s}
+@keyframes hop{50%{transform:translateY(-8px)}}
+svg{image-rendering:pixelated;filter:drop-shadow(0 4px 0 rgba(0,0,0,.35))}
+
+/* pick */
+.chars{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.char{background:var(--plum);border:4px solid var(--cream);padding:10px 2px 8px;display:grid;justify-items:center;gap:8px;font-size:9px;clip-path:var(--notch);transition:transform .1s,background .15s}
+.char svg{width:min(60px,100%);height:auto}
+.char:hover{background:#4d2b8d;transform:translateY(-3px)}
+.char[aria-pressed=true]{background:var(--sun);color:var(--night);border-color:var(--night);animation:pick .5s steps(3)}
+@keyframes pick{50%{transform:translateY(-10px)}}
+#info{font-family:var(--vt);font-size:24px;line-height:1.2;min-height:130px;display:grid;gap:8px;align-content:start}
+#info b{font:400 13px var(--px);color:var(--sun)}
+.stat{display:flex;align-items:center;gap:10px;font:400 10px var(--px)}
+.stat span{width:76px}
+.stat i{display:inline-block;width:14px;height:14px;background:var(--plum);margin-right:4px}
+.stat i.on{background:var(--mint)}
+
+/* mission */
+.grp{display:grid;gap:12px}
+.grp>span{font-size:11px;color:var(--sun)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.seg button{padding:14px 4px;font-size:10px;background:var(--plum);border:4px solid var(--cream);clip-path:var(--notch);transition:background .15s}
+.seg button:hover{background:#4d2b8d}
+.seg button[aria-pressed=true]{background:var(--mint);color:var(--night);border-color:var(--night)}
+.hint{font:24px/1.2 var(--vt);min-height:30px}
+
+/* forge */
+#forge{text-align:center;justify-items:center;gap:26px}
+#fs svg{width:112px;height:112px;animation:shk .3s steps(2) infinite}
+@keyframes shk{50%{transform:translateX(6px) rotate(2deg)}}
+.load{width:min(420px,100%);height:32px;border:4px solid var(--cream);background:var(--night);padding:4px}
+.load i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--mint),var(--sun))}
+.load.run i{animation:fill 1.8s steps(12) forwards}
+@keyframes fill{to{width:100%}}
+#fmsg{font-size:11px;min-height:2.6em}
+
+/* result */
+.clear{text-align:center;display:grid;gap:8px;justify-items:center}
+.reward{font-size:11px;background:var(--mint);color:var(--night);padding:6px 12px;animation:pop .5s steps(4)}
+@keyframes pop{from{transform:scale(.4)}to{transform:scale(1)}}
+.scene{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:end}
+#por{background:var(--plum);border:4px solid var(--cream);padding:8px;clip-path:var(--notch)}
+#por svg{width:104px;height:104px;animation:hop 1.4s steps(2) infinite}
+.dlg{position:relative;background:var(--night);border:4px solid var(--cream);padding:30px 18px 22px;clip-path:var(--notch);min-height:190px}
+#nm{position:absolute;top:0;left:14px;transform:translateY(-4px);background:var(--sun);color:var(--night);padding:6px 10px;font-size:10px}
+#tx{font:clamp(24px,5.4vw,30px)/1.15 var(--vt)}
+.dlg.done::after{content:"";position:absolute;right:16px;bottom:12px;border:8px solid transparent;border-top:12px solid var(--sun);border-bottom:0;animation:bl .9s steps(1) infinite}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.acts .full{grid-column:1/-1}
+.acts .btn{padding:14px 6px;font-size:10px}
+.note{text-align:center;min-height:1.6em;font-size:10px;color:var(--mint)}
+
+@media(max-width:560px){
+ body{font-size:11px}.chars{grid-template-columns:repeat(3,1fr)}.scene{grid-template-columns:1fr;justify-items:center}
+ .acts{grid-template-columns:1fr 1fr}#info{font-size:22px}.sun{bottom:19vh}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01s!important}}
+</style>
+</head>
+<body>
+<div class="sky" aria-hidden="true"><i class="sun"></i><i class="cloud c1"></i><i class="cloud c2"></i><i class="city"></i></div>
+
+<div class="hud off" id="hud"><span id="lv">LV 1</span><span class="bar"><i id="xp"></i></span><span id="cnt">x0</span></div>
+<button id="snd" aria-label="Toggle sound">SFX</button>
+
+<main>
+  <section class="screen on" id="title">
+    <div class="hero" id="heroes" aria-hidden="true"></div>
+    <h1 class="logo">EXCUSE<b>QUEST</b></h1>
+    <p class="tag">A game about replying late</p>
+    <button class="btn start" id="start" data-focus><span>PRESS START</span></button>
+    <p class="hi" id="hi"></p>
+  </section>
+
+  <section class="screen" id="pick">
+    <h2>Who are you texting?</h2>
+    <div class="chars" id="chars"></div>
+    <div class="panel" id="info" aria-live="polite">Tap a character to see how they take late replies.</div>
+    <div class="row"><button class="btn alt" data-go="title">BACK</button><button class="btn" id="next1" disabled data-focus>NEXT</button></div>
+  </section>
+
+  <section class="screen" id="mission">
+    <h2>Set your mission</h2>
+    <div class="panel grp">
+      <span>How late are you?</span>
+      <div class="seg" id="late"></div>
+    </div>
+    <div class="panel grp">
+      <span>How wild should it be?</span>
+      <div class="seg" id="wild"></div>
+      <p class="hint" id="hint"></p>
+    </div>
+    <div class="row"><button class="btn alt" data-go="pick">BACK</button><button class="btn pink" id="forgeBtn" data-focus>FORGE EXCUSE</button></div>
+  </section>
+
+  <section class="screen" id="forge">
+    <div id="fs"></div>
+    <div class="load" id="load"><i></i></div>
+    <p id="fmsg" aria-live="polite">Warming up...</p>
+  </section>
+
+  <section class="screen" id="result">
+    <div class="clear"><h2>Excuse ready!</h2><span class="reward" id="rw">+1 XP</span></div>
+    <div class="scene">
+      <div id="por"></div>
+      <div class="dlg" id="dlg" aria-live="polite"><span id="nm"></span><p id="tx"></p></div>
+    </div>
+    <div class="acts">
+      <button class="btn alt" id="copy">COPY</button>
+      <a class="btn alt" id="tg" target="_blank" rel="noopener">TELEGRAM</a>
+      <a class="btn alt" id="wa" target="_blank" rel="noopener">WHATSAPP</a>
+      <button class="btn full" id="again" data-focus>FORGE ANOTHER</button>
+      <button class="btn pink full" data-go="pick">NEW TARGET</button>
+    </div>
+    <p class="note" id="note"></p>
+  </section>
+</main>
+
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const pick=a=>a[Math.random()*a.length|0];
+const ls={get(k,d){try{return localStorage.getItem(k)??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+const RM=matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+/* data */
+const WHO=[
+ {n:'Boss',line:'Wants it short and professional.',p:2,h:1,o:['Good morning, sorry for the delay:','Apologies for the late response:','Thank you for your patience:'],c:['I will send the update right away.','It will not happen again.','Everything is on track from here.']},
+ {n:'Mom',line:'Will worry first and forgive second.',p:4,h:2,o:["Mom, don't worry:",'Mama, I am alive and well:','Okay, before you panic:'],c:['I love you, I am fine, I will eat something.','I will call you tonight, promise.','Please tell Dad I said hi.']},
+ {n:'Crush',line:'Replies fast. Judges faster.',p:3,h:4,o:['hey you 🙈 okay so','omg sorry,','not ignoring you, I swear:'],c:['anyway, I am here now. Did you miss me? 😏','I thought about replying the whole time.','let me make it up to you with a coffee ☕']},
+ {n:'Friend',line:'Will forgive anything funny.',p:5,h:5,o:['bro listen,',"okay don't judge me:","you won't believe this:"],c:['you owe me a coffee for waiting this long.','I know, I know. I am the worst.','anyway, what did I miss?']},
+ {n:'Teacher',line:'Respects a confident apology.',p:2,h:2,o:['Dear teacher, apologies for the late reply:','Good day, sorry I only saw this now:','Thank you for waiting:'],c:['I will submit everything by tonight.','I take full responsibility.','I will catch up on the material.']}
+];
+const LATE=['An hour','A day','A week'];
+const WILD=[
+ {n:'Chill',d:'Believable. Safe with anyone.',r:['my phone died and I only just found my charger','I fell asleep on the couch without noticing','my phone was on silent all day and I missed it','the network was down in my area for hours','I was stuck in traffic and could not type','your message got buried under a pile of notifications','I was in back-to-back things and lost track of time']},
+ {n:'Spicy',d:'Funny, but a little risky.',r:['a goat walked into my compound and I have been negotiating with it since morning','I was making buna and the smell was so good I forgot the entire world','I took the wrong minibus and toured half the city','my phone fell in the sink and I held a small funeral for it','the power went out right when I started typing, three times','I got trapped in a wedding procession and had to dance my way out','I went to sleep at 7 pm and woke up in a different day']},
+ {n:'Unhinged',d:'Only for people who laugh.',r:['aliens borrowed my phone for a software update','a duck challenged me to a staring contest and I could not look away','my phone got stuck in a parallel timeline where I already replied three days ago','I was elected mayor of the bathroom queue and had to hold an emergency meeting','I was hired as a substitute referee at a chicken wedding','a wizard turned my thumbs into spaghetti until noon','my shadow went on strike and I had to negotiate']}
+];
+
+/* pixel sprites */
+const D={e:'#150f33',m:'#c0392b',w:'#fff8e7',r:'#ff4f81',k:'#150f33',s:'#f0c49a'};
+const SP=[
+ {r:['..gggggg..','.gggggggg.','.gssssssg.','.sesssses.','.ssssssss.','..ssmmss..','...ssss...','.ttwwwwtt.','tttwaawttt','ttttaatttt'],c:{g:'#b8bdd0',t:'#2d3a7a',a:'#e84a4a',s:'#e0a878'}},
+ {r:['..aaaaaa..','.aaaaaaaa.','.aassssaa.','.asessesa.','.aassssaa.','..ssmmss..','...ssss...','.tttttttt.','tttttttttt','tttttttttt'],c:{a:'#ffd166',t:'#2f9e8f',s:'#8a5a3c'}},
+ {r:['..hhhhhh..','.hhhhhhhh.','hhsssssshh','hhsrssrshh','hhsssssshh','h.ssmmss.h','h..ssss..h','.htttttth.','hhtttttthh','tttttttttt'],c:{h:'#5a2a7a',t:'#ff6fa3',s:'#c98c5e'}},
+ {r:['..cccccc..','.cccccccc.','cccccccccc','.sesssses.','.ssssssss.','..smmmms..','...ssss...','.tttttttt.','tttttttttt','tttttttttt'],c:{c:'#3b82f6',t:'#ff8a3d',s:'#6b4430'}},
+ {r:['..hhhhhh..','.hhhhhhhh.','.hssssssh.','.keksskek.','.ssssssss.','..ssmmss..','...ssss...','.ttwwwwtt.','tttwwwwttt','tttttttttt'],c:{h:'#7a4a2a',t:'#7c4dbd',s:'#f0c49a'}}
+];
+function sprite(i){const c={...D,...SP[i].c};let r='';
+ SP[i].r.forEach((row,y)=>[...row].forEach((ch,x)=>{if(ch!=='.')r+=`<rect x="${x}" y="${y}" width="1" height="1" fill="${c[ch]}"/>`}));
+ return `<svg viewBox="0 0 10 10" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`}
+
+/* state */
+let n=+ls.get('eq-n',0),muted=ls.get('eq-m','0')==='1',who=-1,late=1,wild=1,txt='',typer,t1,t2;
+
+/* sound */
+let ac;
+function beep(f,d=.08,type='square',v=.05){if(muted)return;
+ try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;
+ g.gain.setValueAtTime(v,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+d)}catch(e){}}
+const jingle=(a)=>a.forEach((f,i)=>setTimeout(()=>beep(f,.14,'triangle',.07),i*110));
+function snd(){$('#snd').textContent=muted?'OFF':'SFX';$('#snd').setAttribute('aria-pressed',!muted)}
+$('#snd').onclick=()=>{muted=!muted;ls.set('eq-m',muted?'1':'0');snd();beep(660)};
+
+/* hud */
+function hud(){const L=Math.floor(n/5)+1;$('#lv').textContent='LV '+L;$('#cnt').textContent='x'+n;$('#xp').style.width=(n%5)*20+'%';
+ $('#hi').textContent=n?`Excuses forged: ${n}`:'No excuses forged yet.'}
+
+/* screens */
+function show(id){$$('.screen').forEach(s=>s.classList.toggle('on',s.id===id));$('#hud').classList.toggle('off',id==='title');
+ clearInterval(typer);if(id!=='forge'){clearTimeout(t1);clearInterval(t2)}
+ setTimeout(()=>{const f=$(`#${id} [data-focus]`);if(f&&!f.disabled)f.focus({preventScroll:true})},450)}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-go]');if(b){beep(380,.06);show(b.dataset.go)}});
+
+/* build */
+$('#heroes').innerHTML=[0,1,2,3,4].map(sprite).join('');
+const bars=v=>Array.from({length:5},(_,k)=>`<i class="${k<v?'on':''}"></i>`).join('');
+$('#chars').innerHTML=WHO.map((w,i)=>`<button class="char" data-i="${i}" aria-pressed="false">${sprite(i)}<span>${w.n}</span></button>`).join('');
+$('#chars').onclick=e=>{const b=e.target.closest('.char');if(!b)return;who=+b.dataset.i;
+ $$('.char').forEach(c=>c.setAttribute('aria-pressed',c===b));const w=WHO[who];
+ $('#info').innerHTML=`<b>${w.n}</b><span>${w.line}</span><div class="stat"><span>Patience</span>${bars(w.p)}</div><div class="stat"><span>Humor</span>${bars(w.h)}</div>`;
+ $('#next1').disabled=false;beep(500+who*110,.09)};
+$('#next1').onclick=()=>{beep(780,.1);show('mission')};
+function seg(box,list,get,set){const el=$(box);
+ el.innerHTML=list.map((x,i)=>`<button data-i="${i}" aria-pressed="${i===get()}">${x}</button>`).join('');
+ el.onclick=e=>{const b=e.target.closest('button');if(!b)return;set(+b.dataset.i);[...el.children].forEach(c=>c.setAttribute('aria-pressed',c===b));beep(440+b.dataset.i*120,.07);hint()}}
+const hint=()=>$('#hint').textContent=WILD[wild].d;
+seg('#late',LATE,()=>late,v=>late=v);
+seg('#wild',WILD.map(x=>x.n),()=>wild,v=>wild=v);hint();
+
+/* engine */
+let last='';
+function make(){const w=WHO[who];let s;
+ do{s=`${pick(w.o)} it took me ${LATE[late].toLowerCase()} because ${pick(WILD[wild].r)}. ${pick(w.c)}`}while(s===last);
+ last=s;return s}
+
+/* forge */
+const MSG=['Inventing a goat...','Asking the aliens for help...','Polishing the apology...','Adding a tiny funeral...','Checking if it sounds true...'];
+function forge(){show('forge');$('#fs').innerHTML=sprite(who);
+ const l=$('#load');l.classList.remove('run');void l.offsetWidth;l.classList.add('run');
+ let k=0;$('#fmsg').textContent=MSG[0];
+ t2=setInterval(()=>{$('#fmsg').textContent=pick(MSG);beep(300+Math.random()*300,.05)},450);
+ t1=setTimeout(()=>{clearInterval(t2);result()},RM?500:1900)}
+$('#forgeBtn').onclick=()=>{beep(820,.12);forge()};
+$('#again').onclick=()=>{beep(820,.12);forge()};
+
+/* result */
+function result(){
+ txt=make();const w=WHO[who],before=Math.floor(n/5);n++;ls.set('eq-n',n);hud();
+ const up=Math.floor(n/5)>before;$('#rw').textContent=up?'LEVEL UP!':'+1 XP';jingle(up?[523,659,784,1047]:[523,659,784]);
+ show('result');$('#por').innerHTML=sprite(who);$('#nm').textContent='To '+w.n;$('#note').textContent='';
+ const q=encodeURIComponent(txt);$('#tg').href='https://t.me/share/url?url=%20&text='+q;$('#wa').href='https://wa.me/?text='+q;
+ const tx=$('#tx'),d=$('#dlg');d.classList.remove('done');tx.textContent='';
+ if(RM){tx.textContent=txt;d.classList.add('done');return}
+ let k=0;setTimeout(()=>{typer=setInterval(()=>{tx.textContent=txt.slice(0,++k);if(k%4===0)beep(900,.02,'square',.025);
+  if(k>=txt.length){clearInterval(typer);d.classList.add('done')}},24)},500)}
+$('#dlg').onclick=()=>{if(!$('#dlg').classList.contains('done')){clearInterval(typer);$('#tx').textContent=txt;$('#dlg').classList.add('done')}};
+$('#copy').onclick=async()=>{
+ try{await navigator.clipboard.writeText(txt);$('#note').textContent='Copied! Go send it.'}
+ catch(e){const a=document.createElement('textarea');a.value=txt;document.body.appendChild(a);a.select();
+  try{document.execCommand('copy');$('#note').textContent='Copied! Go send it.'}catch(_){$('#note').textContent='Copy failed. Select the text.'}a.remove()}
+ beep(900,.08)};
+
+$('#start').onclick=()=>{jingle([392,523,659]);show('pick')};
+snd();hud();
+</script>
+</body>
+</html>
